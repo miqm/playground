@@ -64,12 +64,15 @@ namespace FunctionApp1.Impl
             else
             {
                 loggerConfiguration = loggerConfiguration
-                    .WriteTo.RollingFile(
-                        pathFormat: Path.Combine(Configuration.GetValue<string>("HOME"), "LogFiles", "Application", "diagnostics-{Date}.txt"),
+                    .WriteTo.File(
+                        Path.Combine(Configuration.GetValue<string>("HOME"), "LogFiles", "Application", "log.txt"),
                         outputTemplate: CONSOLE_OUTPUT_TEMPLATE,
-                        shared: true,
-                        buffered: false,
-                        flushToDiskInterval: null)
+                        buffered:false,
+                        shared: false,
+                        fileSizeLimitBytes: 10485760,
+                        rollingInterval: RollingInterval.Day,
+                        rollOnFileSizeLimit: true
+                       )
                     .WriteTo.ApplicationInsights(telemetryConfiguration, telemetryConverter);
             }
 
