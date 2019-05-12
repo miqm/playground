@@ -78,6 +78,7 @@ namespace FunctionApp1.Impl
 
             var services = new ServiceCollection();
             services.Configure<IConfiguration>(Configuration);
+            services.Configure<FunctionAppSettings>(Configuration);
 
             services.AddLogging(c =>
             {
@@ -95,6 +96,7 @@ namespace FunctionApp1.Impl
         {
             
             builder.RegisterType<WorkerService>().As<IWorkerService>().InstancePerLifetimeScope();
+            builder.RegisterType<StorageService>().As<IStorageService>().InstancePerLifetimeScope();
         }
     }
 
