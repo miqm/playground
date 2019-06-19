@@ -1,0 +1,20 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>netcoreapp2.2</TargetFramework>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Autofac" Version="4.9.2" />
+    <PackageReference Include="autofac.Extensions.DependencyInjection" Version="4.4.0" />
+    <PackageReference Include="Autofac.Extras.Quartz" Version="4.5.1" />
+    <PackageReference Include="LibLog" Version="5.0.6">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+    <PackageReference Include="Microsoft.aspnetcore.app" Version="2.2.3" />
+    <PackageReference Include="quartz" Version="3.0.7" />
+  </ItemGroup>
+
+</Project>
