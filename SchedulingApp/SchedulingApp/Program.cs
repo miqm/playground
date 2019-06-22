@@ -13,36 +13,40 @@ using LogLevel = Microsoft.Extensions.Logging.LogLevel;
 
 namespace SchedulingApp
 {
-    class Program
+    public class Program
     {
         static async Task Main(string[] args)
         {
-            var host = new HostBuilder()
-                .ConfigureLogging((hostContext, logger)=>
-                {
-                    logger.AddConsole();
-                    
-                })
-                .UseServiceProviderFactory(new AutofacServiceProviderFactory())
-                .ConfigureContainer<ContainerBuilder>((hostContext, builder) =>
-                {
-                    builder.RegisterModule(new QuartzAutofacFactoryModule());
-                    builder.RegisterModule(new QuartzAutofacJobsModule(typeof(Program).Assembly));
-                    builder.RegisterType<SchedulerLogger>().AsSelf().SingleInstance();
-                })
-                .ConfigureServices((hostContext, services) =>
-                {
-                    services.AddHostedService<HostedProgram>();
-                })
-                .Build();            
-            LogProvider.SetCurrentLogProvider(host.Services.GetRequiredService<SchedulerLogger>());
-            await host.StartAsync();
+            await RunHost();
+        }
 
-            host.WaitForShutdown();
+        public static async Task RunHost(CancellationToken cancellationToken = default)
+        {
+            var host = new HostBuilder()
+                            .ConfigureLogging((hostContext, logger) =>
+                            {
+                                logger.AddConsole();
+                                logger.AddEventSourceLogger();                                
+
+                            })
+                            .UseServiceProviderFactory(new AutofacServiceProviderFactory())
+                            .ConfigureContainer<ContainerBuilder>((hostContext, builder) =>
+                            {
+                                builder.RegisterModule(new QuartzAutofacFactoryModule());
+                                builder.RegisterModule(new QuartzAutofacJobsModule(typeof(Program).Assembly));
+                                builder.RegisterType<SchedulerLogger>().AsSelf().SingleInstance();
+                            })
+                            .ConfigureServices((hostContext, services) =>
+                            {
+                                services.AddHostedService<HostedProgram>();
+                            })
+                            .Build();
+            LogProvider.SetCurrentLogProvider(host.Services.GetRequiredService<SchedulerLogger>());
+            await host.RunAsync(cancellationToken);
         }
     }
 
-    internal class SchedulerLogger : ILogProvider
+    public class SchedulerLogger : ILogProvider
     {
         private readonly ILogger<SchedulerLogger> _logger;
 
@@ -73,29 +77,34 @@ namespace SchedulingApp
         }
     }
 
-    internal class HostedProgram : IHostedService
+    public class HostedProgram : IHostedService
     {
         private readonly IScheduler _scheduler;
+        private readonly ILogger<HostedProgram> _logger;
 
-        public HostedProgram(IScheduler scheduler)
+        public HostedProgram(IScheduler scheduler, ILogger<HostedProgram> logger)
         {
             _scheduler = scheduler;
-            
+            _logger = logger;
         }
-        public Task StartAsync(CancellationToken cancellationToken)
+        public async Task StartAsync(CancellationToken cancellationToken)
         {
-            _scheduler.ScheduleJob(JobBuilder.Create<TestJob>().Build(), TriggerBuilder.Create().WithCronSchedule("0/15 * * * * ?").StartNow().Build());
-
-            return _scheduler.Start(cancellationToken);
+            _logger.LogInformation("Starting scheduler...");
+            await _scheduler.ScheduleJob(JobBuilder.Create<TestJob>().Build(), TriggerBuilder.Create().WithCronSchedule("0/15 * * * * ?").StartNow().Build());
+            await _scheduler.Start(cancellationToken);
+            _logger.LogInformation("Scheduler started");
         }
 
-        public Task StopAsync(CancellationToken cancellationToken)
+        public async Task StopAsync(CancellationToken cancellationToken)
         {
-            return _scheduler.Shutdown(false, cancellationToken);
+            _logger.LogInformation("Stopping scheduler...");
+            await _scheduler.Shutdown(false, cancellationToken);
+            _logger.LogInformation("Scheduler stopped.");
+
         }
     }
 
-    internal class TestJob : IJob
+    public class TestJob : IJob
     {
         private readonly ILogger<TestJob> _logger;
 
