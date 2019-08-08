@@ -47,6 +47,9 @@ A security token for authentication to cluster management endpoints. Used for si
 .PARAMETER CopyPackageTimeoutSec
 Timeout in seconds for copying application package to image store.
 
+.PARAMETER CreateOnly
+Overrides Behaviour for creating new application. Skips registration check assuming ApplicationType is already registered and only new application needs to be created. Supersedes DeployOnly parameter.
+
 .EXAMPLE
 . Scripts\Deploy-FabricApplication.ps1 -ApplicationPackagePath 'pkg\Debug'
 
@@ -73,7 +76,7 @@ Param
 
     [Switch]
     $DeployOnly,
-
+     
     [Hashtable]
     $ApplicationParameter,
 
@@ -101,7 +104,10 @@ Param
     $CopyPackageTimeoutSec,
 
     [int]
-    $RegisterApplicationTypeTimeoutSec
+    $RegisterApplicationTypeTimeoutSec,
+
+    [Switch]
+    $CreateOnly
 )
 
 function Read-XmlElementAsHashtable
@@ -242,7 +248,7 @@ if ($IsUpgrade)
     {
         $Action = "Register"
     }
-    
+
     $UpgradeParameters = $publishProfile.UpgradeDeployment.Parameters
 
     if ($OverrideUpgradeBehavior -eq 'ForceUpgrade')
@@ -255,19 +261,30 @@ if ($IsUpgrade)
     $PublishParameters['UpgradeParameters'] = $UpgradeParameters
     $PublishParameters['UnregisterUnusedVersions'] = $UnregisterUnusedApplicationVersionsAfterUpgrade
 
+    Write-Host "Publish-UpgradedServiceFabricApplication"
+    $PublishParameters
+    
     Publish-UpgradedServiceFabricApplication @PublishParameters
 }
 else
-{
+{  
     $Action = "RegisterAndCreate"
     if ($DeployOnly)
     {
         $Action = "Register"
+    }
+    if ($CreateOnly)
+    {
+        $Action = "Create"
     }
 
     $PublishParameters['Action'] = $Action
     $PublishParameters['OverwriteBehavior'] = $OverwriteBehavior
     $PublishParameters['SkipPackageValidation'] = $SkipPackageValidation
     
+ 
+    Write-Host "Publish-NewServiceFabricApplication"
+    $PublishParameters
+
     Publish-NewServiceFabricApplication @PublishParameters
 }
