@@ -1,19 +1,14 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq;
-using System.Threading.Tasks;
 using AutoMapper;
 using FluentValidation.AspNetCore;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.HttpsPolicy;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
+using Microsoft.Extensions.Hosting;
 using Microsoft.OpenApi.Models;
 
 namespace Miqm.WebApi
@@ -30,14 +25,22 @@ namespace Miqm.WebApi
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
-            services.AddMvc().SetCompatibilityVersion(CompatibilityVersion.Version_2_2).AddFluentValidation(fv =>
+            services.AddControllers().SetCompatibilityVersion(CompatibilityVersion.Version_3_0).AddFluentValidation(fv =>
             {
                 fv.RegisterValidatorsFromAssemblyContaining<Startup>();
             });
             services.AddAutoMapper(typeof(Startup));
             services.AddSwaggerGen(c =>
             {
-                c.SwaggerDoc("v1", new OpenApiInfo { Title = "My API", Version = "v1" });
+                c.OperationFilter<CustomResponseType>();
+                c.SwaggerDoc("v1", new OpenApiInfo { Title = "My API", Version = "v1",
+                    Contact = new OpenApiContact()
+                    {
+                        Email = "test@example.com",
+                        Url = new Uri("https://example.com"),
+                        Name = "Test Name"              
+                    }
+                });
             });
             services.Configure<ApiBehaviorOptions>(o =>
             {
@@ -54,7 +57,6 @@ namespace Miqm.WebApi
                     var result = new BadRequestObjectResult(problemDetails);
 
                     result.ContentTypes.Add("application/problem+json");
-                    result.ContentTypes.Add("application/problem+xml");
 
                     return result;
                 };
@@ -66,7 +68,7 @@ namespace Miqm.WebApi
             problemDetails.Extensions["traceId"] = traceId;
         }
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
-        public void Configure(IApplicationBuilder app, IHostingEnvironment env)
+        public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
         {
             if (env.IsDevelopment())
             {
@@ -77,15 +79,20 @@ namespace Miqm.WebApi
                 // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
                 app.UseHsts();
             }
-            app.UseSwagger();
+            app.UseRouting();
+
+            app.UseSwagger(s => { 
+            });
 
             app.UseSwaggerUI(c =>
-            {
+            {                          
                 c.SwaggerEndpoint("/swagger/v1/swagger.json", "My API V1");
             });
 
             //app.UseHttpsRedirection();
-            app.UseMvc();
+            app.UseEndpoints(s => 
+                s.MapControllers()
+            );
         }
     }
 }

@@ -4,6 +4,7 @@ using System.ComponentModel.DataAnnotations;
 using System.Diagnostics;
 using System.Linq;
 using System.Linq.Expressions;
+using System.Net.Mime;
 using System.Reflection;
 using System.Threading.Tasks;
 using AutoMapper;
@@ -41,6 +42,9 @@ namespace WebApi.ValidationTest
             return NotFound();
         }
         [HttpPut("data")]
+        [Consumes(MediaTypeNames.Application.Json)]
+        [Produces(MediaTypeNames.Application.Json)]
+        [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status409Conflict)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         public ActionResult CreateOrUpdate(DataInputDto input)
