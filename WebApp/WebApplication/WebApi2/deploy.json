@@ -1,0 +1,51 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "sites_name": {
+      "type": "String"
+    },
+    "acr_name": {
+      "type": "String"
+    },
+    "docker_tag": {
+      "type": "string"
+    },
+    "docker_image": {
+      "type": "string",
+      "defaultValue": "webapi2"
+    }
+  },
+  "variables": {},
+  "resources": [
+    {
+      "type": "Microsoft.Web/sites/config",
+      "apiVersion": "2018-11-01",
+      "name": "[concat(parameters('sites_name'), '/web')]",
+      "location": "West Europe",
+      "dependsOn": [
+      ],
+      "properties": {
+        "linuxFxVersion": "[concat('DOCKER|', parameters('acr_name'),'.azurecr.io/',parameters('docker_image'),':',parameters('docker_tag'))]"
+      }
+    },
+    {
+      "type": "Microsoft.Web/sites/config",
+      "apiVersion": "2018-11-01",
+      "name": "[concat(parameters('sites_name'), '/appsettings')]",
+      "location": "West Europe",
+      "dependsOn": [
+      ],
+      "properties": {
+        "DOCKER_REGISTRY_SERVER_PASSWORD": "[listCredentials(resourceId('Microsoft.ContainerRegistry/registries',parameters('acr_name')),'2019-05-01').passwords[0].value]",
+        "DOCKER_REGISTRY_SERVER_URL": "[concat('https://',parameters('acr_name'),'.azurecr.io')]",
+        "DOCKER_REGISTRY_SERVER_USERNAME": "[parameters('acr_name')]",
+        "WEBSITE_DNS_SERVER": "168.63.129.16",
+        "WEBSITE_VNET_ROUTE_ALL": "1",
+        "WEBSITES_ENABLE_APP_SERVICE_STORAGE": "false",
+        "WEBSITES_PORT": "80",
+        "TEXT": "Nowy Tekst"
+      }
+    }
+  ]
+}
