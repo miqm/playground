@@ -1,0 +1,9 @@
+terraform {
+  backend "azurerm" {
+    resource_group_name  = "rg"
+    storage_account_name = "storage"
+    container_name       = "terraform-state"
+    subscription_id      = "00000000-0000-0000-0000-000000000000"
+    key                  = "aks.terraform.tfstate"
+  }
+}
