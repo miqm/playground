@@ -38,3 +38,10 @@ variable log_analytics_workspace_location {
 variable subscription_id {
     default = null
 }
+
+variable acr_name {
+  
+}
+variable admin_group_object_id {
+  
+}

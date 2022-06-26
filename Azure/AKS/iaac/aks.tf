@@ -64,37 +64,51 @@ resource "azurerm_kubernetes_cluster" "k8s" {
       enabled                    = true
       log_analytics_workspace_id = azurerm_log_analytics_workspace.logs.id
     }
+    azure_policy {
+      enabled = true
+    }
   }
   network_profile {
     load_balancer_sku  = "Standard"
     network_plugin     = "kubenet"
-    docker_bridge_cidr = "172.17.0.1/16"
-    service_cidr       = "10.254.0.0/16"
-    dns_service_ip     = "10.254.0.10"
-    pod_cidr           = "10.255.0.0/16"
+    docker_bridge_cidr = "172.18.0.1/16"
+    service_cidr       = "172.19.0.0/16"
+    dns_service_ip     = "172.19.0.10"
+    pod_cidr           = "172.20.0.0/15"
   }
+
+  role_based_access_control {
+    enabled = true
+    azure_active_directory {
+      managed            = true
+      azure_rbac_enabled = true
+      admin_group_object_ids = [
+        var.admin_group_object_id
+      ]
+    }
+  }
+
+  local_account_disabled = true
 
   tags = {
     Environment = "Development"
   }
+
+  depends_on = [
+    azurerm_role_assignment.aks_subet_core_contributor,
+    azurerm_role_assignment.aks_subet_system_contributor,
+    azurerm_role_assignment.aks_subet_worker_contributor,
+    azurerm_role_assignment.aks_udr_contributor,
+    azurerm_subnet_route_table_association.aks_cluster_udr_core,
+    azurerm_subnet_route_table_association.aks_cluster_udr_system,
+    azurerm_subnet_route_table_association.aks_cluster_udr_worker
+  ]
 }
 
 resource "azurerm_user_assigned_identity" "aks_identity" {
   name                = "aks-id"
   resource_group_name = azurerm_resource_group.k8s.name
   location            = var.location
-}
-
-resource "azurerm_role_assignment" "aks_subet_system_contributor" {
-  scope                = azurerm_subnet.aks_system.id
-  role_definition_name = "Network Contributor"
-  principal_id         = azurerm_user_assigned_identity.aks_identity.principal_id
-}
-
-resource "azurerm_role_assignment" "aks_subet_worker_contributor" {
-  scope                = azurerm_subnet.aks_worker.id
-  role_definition_name = "Network Contributor"
-  principal_id         = azurerm_user_assigned_identity.aks_identity.principal_id
 }
 
 resource "azurerm_kubernetes_cluster_node_pool" "workerpool" {
@@ -125,15 +139,79 @@ resource "azurerm_subnet" "core" {
   virtual_network_name = azurerm_virtual_network.vnet.name
   address_prefixes     = ["10.0.100.0/27"]
 }
+resource "azurerm_subnet" "aks_core" {
+  name                 = "aks-core"
+  resource_group_name  = azurerm_resource_group.k8s.name
+  virtual_network_name = azurerm_virtual_network.vnet.name
+  address_prefixes     = ["10.0.100.32/27"]
+}
 resource "azurerm_subnet" "aks_system" {
   name                 = "aks-system"
   resource_group_name  = azurerm_resource_group.k8s.name
   virtual_network_name = azurerm_virtual_network.vnet.name
-  address_prefixes     = ["10.0.100.32/27"]
+  address_prefixes     = ["10.0.100.64/26"]
 }
 resource "azurerm_subnet" "aks_worker" {
   name                 = "aks-worker"
   resource_group_name  = azurerm_resource_group.k8s.name
   virtual_network_name = azurerm_virtual_network.vnet.name
-  address_prefixes     = ["10.0.100.64/27"]
+  address_prefixes     = ["10.0.100.128/26"]
+}
+resource "azurerm_role_assignment" "aks_subet_core_contributor" {
+  scope                = azurerm_subnet.aks_core.id
+  role_definition_name = "Network Contributor"
+  principal_id         = azurerm_user_assigned_identity.aks_identity.principal_id
+}
+resource "azurerm_role_assignment" "aks_subet_system_contributor" {
+  scope                = azurerm_subnet.aks_system.id
+  role_definition_name = "Network Contributor"
+  principal_id         = azurerm_user_assigned_identity.aks_identity.principal_id
+}
+resource "azurerm_role_assignment" "aks_subet_worker_contributor" {
+  scope                = azurerm_subnet.aks_worker.id
+  role_definition_name = "Network Contributor"
+  principal_id         = azurerm_user_assigned_identity.aks_identity.principal_id
+}
+
+resource "azurerm_route_table" "route_table" {
+  name                = "aks-cluster-udr"
+  location            = azurerm_resource_group.k8s.location
+  resource_group_name = azurerm_resource_group.k8s.name
+}
+resource "azurerm_subnet_route_table_association" "aks_cluster_udr_core" {
+  route_table_id = azurerm_route_table.route_table.id
+  subnet_id      = azurerm_subnet.aks_core.id
+}
+resource "azurerm_subnet_route_table_association" "aks_cluster_udr_system" {
+  route_table_id = azurerm_route_table.route_table.id
+  subnet_id      = azurerm_subnet.aks_system.id
+}
+
+resource "azurerm_subnet_route_table_association" "aks_cluster_udr_worker" {
+  route_table_id = azurerm_route_table.route_table.id
+  subnet_id      = azurerm_subnet.aks_worker.id
+}
+
+
+
+
+
+resource "azurerm_role_assignment" "aks_udr_contributor" {
+  scope                = azurerm_route_table.route_table.id
+  role_definition_name = "Network Contributor"
+  principal_id         = azurerm_user_assigned_identity.aks_identity.principal_id
+}
+
+resource "azurerm_container_registry" "acr" {
+  admin_enabled       = true
+  name                = var.acr_name
+  resource_group_name = azurerm_resource_group.k8s.name
+  sku                 = "Basic"
+  location            = var.location
+}
+
+resource "azurerm_role_assignment" "acr_aks_pull" {
+  scope                = azurerm_container_registry.acr.id
+  role_definition_name = "AcrPull"
+  principal_id         = azurerm_user_assigned_identity.aks_identity.principal_id
 }
