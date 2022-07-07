@@ -14,7 +14,7 @@
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
-    <PackageReference Include="Microsoft.aspnetcore.app" Version="2.2.3" />
+    <PackageReference Include="Microsoft.aspnetcore.app" Version="2.2.6" />
     <PackageReference Include="Microsoft.Extensions.Logging.EventSource" Version="2.2.0" />
     <PackageReference Include="quartz" Version="3.0.7" />
   </ItemGroup>
