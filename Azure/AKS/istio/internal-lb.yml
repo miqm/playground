@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: internal-app
+  annotations:
+    service.beta.kubernetes.io/azure-load-balancer-internal: "true"
+    service.beta.kubernetes.io/azure-load-balancer-internal-subnet: "aks-core"
+spec:
+  type: LoadBalancer
+  loadBalancerIP: 10.0.100.36
+  ports:
+  - port: 80
+  selector:
+    app: internal-app
